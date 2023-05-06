@@ -43,15 +43,29 @@ def get_vector_dets(vector):
     sd/=(n-1)
     sd = math.sqrt(sd)
     return start, exp_int, sd
+
+def get_avg_for_segments(segment_mat, name):
+    avg_dict = {}
+    for i in range(12):
+        avg_dict[name+str(i+1)]=0
+    for row in segment_mat:
+        for i in range(12):
+            avg_dict[name+str(i+1)] += row[i]
     
+    for i in range(12):
+        avg_dict[name+str(i+1)] /= len(segment_mat)
+        
+    return avg_dict
+
 def main():
     outputFile1 = open('SongCSV.csv', 'w')
     csvRowString = ""
-    csvRowString = ("Title,AlbumName,Year,ArtistName,ArtistLocation,ArtistLatitude,"+
-        "ArtistLongitude,ArtistFamiliarity,ArtistHotttnesss,Danceability,BarsStartFirst,BarsStartIntervalMean,BarsStartIntervalSD,BeatsStartFirst"+
-        ",BeatsStartIntervalMean,BeatsStartIntervalSD,Duration,Energy,EndOfFadeIn,KeySignature,"+
-        "Loudness,Mode,SongHotttnesss,StartOfFadeOut,SectionsStartFirst,SectionsStartIntervalMean,SectionsStartIntervalSD,"+
-        "SegmentsStartFirst,SegmentsStartIntervalMean,SegmentsStartIntervalSD,TatumsStartFirst,TatumsStartIntervalMean,TatumsStartIntervalSD,Tempo,TimeSignature")
+    csvRowString = ("Title,song_id,AlbumName,Year,ArtistName,ArtistLocation,ArtistLatitude,"+
+        "ArtistLongitude,ArtistFamiliarity,ArtistHotttnesss,Danceability"+
+        ",Duration,Energy,EndOfFadeIn,KeySignature,"+
+        "Loudness,Mode,SongHotttnesss,StartOfFadeOut"+
+        ",Tempo,TimeSignature"+
+        ",chroma1,chroma2,chroma3,chroma4,chroma5,chroma6,chroma7,chroma8,chroma9,chroma10,chroma11,chroma12,timbre1,timbre2,timbre3,timbre4,timbre5,timbre6,timbre7,timbre8,timbre9,timbre10,timbre11,timbre12")
     
     csvAttributeList = re.split('\W+', csvRowString)
     for i, v in enumerate(csvAttributeList):
@@ -74,6 +88,13 @@ def main():
         sectionsStartVec = get_vector_dets(hdf5_getters.get_sections_start(songH5File))
         segmentsStartVec = get_vector_dets(hdf5_getters.get_segments_start(songH5File))
         
+        segments_pitches = hdf5_getters.get_segments_pitches(songH5File)
+        segments_timbre = hdf5_getters.get_segments_timbre(songH5File)
+        
+        chromas = get_avg_for_segments(segments_pitches,"chroma")
+        timbres = get_avg_for_segments(segments_timbre,"timbre")
+        song_id = hdf5_getters.get_song_id(songH5File)
+        
         for attribute in csvAttributeList:
             
             # Note that the strings are prefixed by b' and suffixed by ', thus the string[2:-1] is appended
@@ -83,6 +104,8 @@ def main():
                 albumName = albumName.replace(";"," ")
                 albumName = albumName.replace(';',' ')
                 csvRowString += albumName[2:-1]
+            elif attribute == 'song_id'.lower():
+                csvRowString += str(song_id)[2:-1]
             elif attribute == 'ArtistLatitude'.lower():
                 latitude = str(hdf5_getters.get_artist_latitude(songH5File))
                 if latitude == 'nan':
@@ -178,6 +201,10 @@ def main():
                 csvRowString += title[2:-1]
             elif attribute == 'Year'.lower():
                 csvRowString += str(hdf5_getters.get_year(songH5File))
+            elif attribute[:6] == 'chroma'.lower():
+                csvRowString += str(chromas[attribute])
+            elif attribute[:6] == 'timbre'.lower():
+                csvRowString += str(timbres[attribute])
 
             csvRowString += ","
 
